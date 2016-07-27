@@ -51,9 +51,11 @@ def establish_connection(addr, port):
                 logger.error(be)
     return None
 
+
 def start_plugins(irc_client):
-    import plugins.testplugin
-    run_plugin(plugins.testplugin.TestPlugin(), irc_client)
+    import plugins.filemonitor
+    run_plugin(plugins.filemonitor.FileMonitor('testfile'), irc_client)
+
 
 def build_irc_settings():
     irc_settings = {}
@@ -66,11 +68,13 @@ def build_irc_settings():
         irc_settings['realname'] = args.realname
     return irc_settings
 
+
 def run_honkmaster(skt):
     irc_settings = build_irc_settings()
     irc_client = lib.ircclient.IRCClient(skt, **irc_settings)
     start_plugins(irc_client)
     asyncore.loop(timeout=0.1)
+
 
 def main():
     skt = establish_connection(args.server, args.port)

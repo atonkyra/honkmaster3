@@ -2,6 +2,7 @@ import asynchat
 import StringIO
 import logging
 import random
+import time
 
 
 IRCStatusMap = {
@@ -41,11 +42,14 @@ class IRCClient(asynchat.async_chat):
         for k,v in kwargs.iteritems():
             self._irc_settings[k] = v
         self._queue_initial_irc_connection_commands()
+        self._ready = False
 
     def _send_message_to_channel(self, channel, msg):
         self._encsendline('PRIVMSG %s :%s' % (channel, msg))
 
     def broadcast_message(self, msg):
+        while not self._ready:
+            time.sleep(1)
         for channel in self._joined_channels:
             self._send_message_to_channel(channel, msg)
 
@@ -96,6 +100,7 @@ class IRCClient(asynchat.async_chat):
             self._encsendline("NICK %s" % (altnick))
         if msg['action'] == 'ENDOFMOTD':
             self._queue_channel_joins()
+            self._ready = True
         if msg['action'] == 'JOIN':
             self._handle_channel_join(msg)
 

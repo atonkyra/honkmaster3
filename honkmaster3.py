@@ -63,9 +63,9 @@ def start_plugins(irc_client):
         p = None
         if plugin in plugins.available_plugins:
             if plugargs is None:
-                p = plugins.available_plugins['filemonitor']()
+                p = plugins.available_plugins[plugin]()
             else:
-                p = plugins.available_plugins['filemonitor'](plugargs)
+                p = plugins.available_plugins[plugin](plugargs)
             run_plugin(p, irc_client)
         else:
             logger.error("plugin not found: %s", plugin)

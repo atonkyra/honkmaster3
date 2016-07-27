@@ -2,6 +2,7 @@
 import asyncore
 import socket
 import logging
+import plugins
 import lib.ircclient
 from lib.pluginrunner import run_plugin
 import argparse
@@ -18,9 +19,10 @@ parser.add_argument('-s', '--server', required=True, help='IRC server to join')
 parser.add_argument('--server-password', required=False, help='IRC server password', default=None)
 parser.add_argument('-P', '--port', required=False, help='IRC server port', default=6667, type=int)
 parser.add_argument('-S', '--ssl', required=False, help='use SSL', default=False, action='store_true')
-parser.add_argument('-c', '--channel', required=True, help='IRC channels to join, may be specified multiple times', action='append')
+parser.add_argument('-c', '--channel', required=True, help='IRC channels to join, may be specified multiple times', action='append', default=[])
 parser.add_argument('-n', '--nick', required=False, help='IRC nick')
 parser.add_argument('-r', '--realname', required=False, help='IRC realname')
+parser.add_argument('-p', '--plugin', required=False, help='Plugins to use, argument by plugin:arg1, may be specified multiple times', action='append', default=[])
 args = parser.parse_args()
 
 
@@ -54,8 +56,19 @@ def establish_connection(addr, port):
 
 
 def start_plugins(irc_client):
-    import plugins.filemonitor
-    run_plugin(plugins.filemonitor.FileMonitor('testfile'), irc_client)
+    for plugin in args.plugin:
+        plugargs = None
+        if ':' in plugin:
+            plugin, plugargs = plugin.split(':',1)
+        p = None
+        if plugin in plugins.available_plugins:
+            if plugargs is None:
+                p = plugins.available_plugins['filemonitor']()
+            else:
+                p = plugins.available_plugins['filemonitor'](plugargs)
+            run_plugin(p, irc_client)
+        else:
+            logger.error("plugin not found: %s", plugin)
 
 
 def build_irc_settings():

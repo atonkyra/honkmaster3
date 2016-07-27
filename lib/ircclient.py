@@ -39,10 +39,14 @@ class IRCClient(asynchat.async_chat):
         self._rbuf = StringIO.StringIO()
         self._irc_settings = {}
         self._joined_channels = []
+        self._rate_control_value = 0
+        self._rate_control_last_message_at = 0
+        self._rate_control_limiting = False
+        self._rate_control_discard_count = 0
+        self._ready = False
         for k,v in kwargs.iteritems():
             self._irc_settings[k] = v
         self._queue_initial_irc_connection_commands()
-        self._ready = False
 
     def _send_message_to_channel(self, channel, msg):
         self._encsendline('PRIVMSG %s :%s' % (channel, msg))
@@ -82,7 +86,24 @@ class IRCClient(asynchat.async_chat):
             else:
                 logger.error("channels argument is not list, skipping channel joins")
 
-    def _encsendline(self, data):
+    def _encsendline(self, data, force=False):
+        if self._ready:
+            cur_time = time.time()
+            diff_time = cur_time - self._rate_control_last_message_at
+            self._rate_control_last_message_at = cur_time
+            self._rate_control_value = max(0.0, self._rate_control_value - diff_time)
+            if self._rate_control_limiting and self._rate_control_value == 0.0:
+                logger.info("cleared rate-limit, %s messages discarded", self._rate_control_discard_count)
+                self._rate_control_discard_count = 0
+                self._rate_control_limiting = False
+            if not self._rate_control_limiting:
+                self._rate_control_value += 3
+                if self._rate_control_value > 40.0 and not self._rate_control_limiting:
+                    self._rate_control_limiting = True
+            if self._rate_control_limiting and not force:
+                self._rate_control_discard_count += 1
+                logger.warning("discarding data due to rate-limiting: %s", data)
+                return
         try:
             linedata = "%s\r\n" % (data)
             self.push(linedata.encode('utf-8'))
@@ -109,7 +130,7 @@ class IRCClient(asynchat.async_chat):
     def _parse_server_message(self, msg):
         if msg.startswith('PING'):
             challenge = msg.split(':')[1].strip()
-            self._encsendline('PONG :%s' % (challenge))
+            self._encsendline('PONG :%s' % (challenge), True)
             logger.info("ping %s? pong %s!", challenge, challenge)
             return
         source = None

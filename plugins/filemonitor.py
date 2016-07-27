@@ -29,10 +29,9 @@ class FileMonitor(object):
                 logger.error("could not open file %s, trying again...", self._logfile)
                 self._filehandle = None
                 time.sleep(1)
-	logger.info("opened %s", self._logfile)
+        logger.info("opened %s", self._logfile)
         if self._filehandle is not None:
             yield 'now tracking file %s' % (self._logfile)
-
         while True:
             gotline = False
             test_ino = ino
@@ -40,7 +39,6 @@ class FileMonitor(object):
                 test_ino = os.stat(self._filehandle.name).st_ino
             except:
                 continue
-
             if ino != test_ino:
                 try:
                     self._filehandle.close()
@@ -50,14 +48,12 @@ class FileMonitor(object):
                 st_results = os.stat(self._logfile)
                 st_size = st_results[6]
                 ino = os.stat(self._filehandle.name).st_ino
-
             where = self._filehandle.tell()
             line = self._filehandle.readline()
             if not line:
                 self._filehandle.seek(where)
             else:
                 gotline = True
-
             if gotline:
                 line = line.strip()
                 logger.debug("new line: %s", line)

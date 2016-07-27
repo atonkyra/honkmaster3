@@ -29,7 +29,8 @@ class FileMonitor(object):
                 logger.error("could not open file %s, trying again...", self._logfile)
                 self._filehandle = None
                 time.sleep(1)
-        if self._filehandle is not None and self._running:
+	logger.info("opened %s", self._logfile)
+        if self._filehandle is not None:
             yield 'now tracking file %s' % (self._logfile)
 
         while True:
@@ -58,6 +59,8 @@ class FileMonitor(object):
                 gotline = True
 
             if gotline:
-                yield line.strip()
+                line = line.strip()
+                logger.debug("new line: %s", line)
+                yield line
             else:
                 time.sleep(0.1)

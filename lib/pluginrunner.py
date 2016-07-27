@@ -16,6 +16,7 @@ class PluginRunner(threading.Thread):
         self._irc_client = irc_client
         self._crashed = False
         self._finished = False
+        self.daemon = True
 
     def run(self):
         self._logger.debug("now listening for new messages")

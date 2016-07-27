@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import asyncore
 import socket
 import logging

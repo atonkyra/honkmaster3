@@ -95,7 +95,7 @@ class IRCClient(asynchat.async_chat):
     def _handle_server_message(self, msg):
         if msg['action'] == 'NICKINUSE':
             nick = user_set_or_default('HonkMaster3', 'nick', self._irc_settings)
-            rand_from_nick = "%s-%03s" % (nick, random.randint(0,100))
+            rand_from_nick = "%s-%s" % (nick, random.randint(0,100))
             altnick = user_set_or_default(rand_from_nick, 'altnick', self._irc_settings)
             self._encsendline("NICK %s" % (altnick))
         if msg['action'] == 'ENDOFMOTD':
@@ -106,7 +106,7 @@ class IRCClient(asynchat.async_chat):
 
     def _parse_server_message(self, msg):
         if msg.startswith('PING'):
-            challenge = msg.split(':')[1]
+            challenge = msg.split(':')[1].strip()
             self._encsendline('PONG :%s' % (challenge))
             logger.info("ping %s? pong %s!", challenge, challenge)
             return

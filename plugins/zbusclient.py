@@ -30,6 +30,7 @@ class ZBusClient(object):
         while True:
             try:
                 topic, data = self._skt.recv_multipart()
+                logger.debug("new data: topic=%s data=%s", topic, data)
                 inc_data = json.loads(data)
                 inc_data['topic'] = topic
                 string = self._fmtstring.format(**inc_data)

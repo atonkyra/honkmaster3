@@ -30,8 +30,7 @@ class FileMonitor(object):
                 self._filehandle = None
                 time.sleep(1)
         logger.info("opened %s", self._logfile)
-        if self._filehandle is not None:
-            yield 'now tracking file %s' % (self._logfile)
+        yield 'now tracking file %s' % (self._logfile)
         while True:
             gotline = False
             test_ino = ino

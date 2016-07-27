@@ -48,6 +48,8 @@ class IRCClient(asynchat.async_chat):
         self._encsendline('PRIVMSG %s :%s' % (channel, msg))
 
     def broadcast_message(self, msg):
+        if not self._ready:
+            logger.debug("defer message until ready: %s", msg)
         while not self._ready:
             time.sleep(1)
         for channel in self._joined_channels:
@@ -100,9 +102,9 @@ class IRCClient(asynchat.async_chat):
             self._encsendline("NICK %s" % (altnick))
         if msg['action'] == 'ENDOFMOTD':
             self._queue_channel_joins()
-            self._ready = True
         if msg['action'] == 'JOIN':
             self._handle_channel_join(msg)
+            self._ready = True
 
     def _parse_server_message(self, msg):
         if msg.startswith('PING'):

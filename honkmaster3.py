@@ -2,7 +2,6 @@
 import asyncore
 import socket
 import logging
-import plugins
 import lib.ircclient
 from lib.pluginrunner import run_plugin
 import argparse
@@ -24,6 +23,7 @@ parser.add_argument('-n', '--nick', required=False, help='IRC nick')
 parser.add_argument('-r', '--realname', required=False, help='IRC realname')
 parser.add_argument('-p', '--plugin', required=False, help='Plugins to use, argument by plugin:arg1, may be specified multiple times', action='append', default=[])
 args = parser.parse_args()
+import plugins
 
 
 def establish_connection(addr, port):

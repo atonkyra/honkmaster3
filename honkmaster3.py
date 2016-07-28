@@ -47,7 +47,7 @@ def establish_connection(addr, port):
                     skt.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 6)
                 except:
                     pass
-                skt.connect((addr, port))
+                skt.connect((real_addr, real_port))
                 logger.info("connected")
                 return skt
             except BaseException as be:

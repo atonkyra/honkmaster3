@@ -37,3 +37,6 @@ class ZBusClient(object):
                 yield string
             except BaseException as be:
                 logger.exception(be)
+
+
+__plugin_class__ = ZBusClient

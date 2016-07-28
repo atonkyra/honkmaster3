@@ -59,3 +59,7 @@ class FileMonitor(object):
                 yield line
             else:
                 time.sleep(0.1)
+
+
+__plugin_class__ = FileMonitor
+

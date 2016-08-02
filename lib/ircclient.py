@@ -44,6 +44,7 @@ class IRCClient(asynchat.async_chat):
         self._rate_control_limiting = False
         self._rate_control_discard_count = 0
         self._ready = False
+        self._selected_nick = None
         for k,v in kwargs.iteritems():
             self._irc_settings[k] = v
         self._queue_initial_irc_connection_commands()
@@ -115,6 +116,10 @@ class IRCClient(asynchat.async_chat):
         logger.info("joined %s" % (msg['target']))
         self._joined_channels.append(msg['target'])
 
+    def _get_nick_from_source(self, source):
+        src = source.split('!')[0]
+        return src
+
     def _handle_server_message(self, msg):
         if msg['action'] == 'NICKINUSE':
             nick = user_set_or_default('HonkMaster3', 'nick', self._irc_settings)
@@ -122,8 +127,9 @@ class IRCClient(asynchat.async_chat):
             altnick = user_set_or_default(rand_from_nick, 'altnick', self._irc_settings)
             self._encsendline("NICK %s" % (altnick))
         if msg['action'] == 'ENDOFMOTD':
+            self._selected_nick = msg['target']
             self._queue_channel_joins()
-        if msg['action'] == 'JOIN':
+        if msg['action'] == 'JOIN' and self._get_nick_from_source(msg['source']) == self._selected_nick:
             self._handle_channel_join(msg)
             self._ready = True
 

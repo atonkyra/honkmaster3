@@ -184,6 +184,7 @@ class IRCClient(asynchat.async_chat):
     def found_terminator(self):
         msg = self._rbuf.getvalue()
         self._rbuf.truncate(0)
+        self._rbuf.seek(0)
         try:
             msg_decoded = msg
             logger.debug("<- %s", msg_decoded.strip())

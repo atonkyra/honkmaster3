@@ -54,9 +54,13 @@ class FileMonitor(object):
             else:
                 gotline = True
             if gotline:
-                line = line.decode('utf-8', errors='ignore').strip()
-                logger.debug("new line: %s", line)
-                yield line
+                proper_line = None
+                try:
+                    proper_line = line.decode('utf-8', errors='ignore').strip()
+                except:
+                    proper_line = line.strip()
+                logger.debug("new line: %s", proper_line)
+                yield proper_line
             else:
                 time.sleep(0.1)
 

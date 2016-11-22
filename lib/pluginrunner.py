@@ -24,5 +24,6 @@ class PluginRunner(threading.Thread):
             for msg in self._plugin.get_messages():
                 self._irc_client.broadcast_message(msg)
         except BaseException as be:
+            self._logger.exception(be)
             self._crashed = True
         self._finished = True

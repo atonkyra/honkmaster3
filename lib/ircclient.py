@@ -1,5 +1,8 @@
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 import asynchat
-import StringIO
 import logging
 import random
 import time
@@ -36,7 +39,11 @@ class IRCClient(asynchat.async_chat):
     def __init__(self, skt, **kwargs):
         asynchat.async_chat.__init__(self, sock=skt)
         self.set_terminator(b'\n')
-        self._rbuf = StringIO.StringIO()
+        self._rbuf = None
+        try:
+            self._rbuf = StringIO.StringIO()
+        except AttributeError:
+            self._rbuf = StringIO()
         self._irc_settings = {}
         self._joined_channels = []
         self._rate_control_value = 0
@@ -45,8 +52,8 @@ class IRCClient(asynchat.async_chat):
         self._rate_control_discard_count = 0
         self._ready = False
         self._selected_nick = None
-        for k,v in kwargs.iteritems():
-            self._irc_settings[k] = v
+        for k in kwargs.keys():
+            self._irc_settings[k] = kwargs[k]
         self._queue_initial_irc_connection_commands()
 
     def _send_message_to_channel(self, channel, msg):
@@ -57,8 +64,11 @@ class IRCClient(asynchat.async_chat):
             logger.debug("defer message until ready: %s", msg)
         while not self._ready:
             time.sleep(1)
-        for channel in self._joined_channels:
-            self._send_message_to_channel(channel, msg)
+        try:
+            for channel in self._joined_channels:
+                self._send_message_to_channel(channel, msg)
+        except BaseException as be:
+            logger.exception(be)
 
     def _queue_initial_irc_connection_commands(self):
         s = self._irc_settings
@@ -77,7 +87,7 @@ class IRCClient(asynchat.async_chat):
                     if isinstance(channel_info, tuple):
                         join_settings['channel'] = channel_info[0]
                         join_settings['password'] = channel_info[1]
-                    elif isinstance(channel_info, basestring):
+                    elif isinstance(channel_info, str):
                         join_settings['channel'] = channel_info
                     if 'channel' in join_settings:
                         if 'password' in join_settings:
@@ -107,7 +117,7 @@ class IRCClient(asynchat.async_chat):
                 return
         try:
             linedata = "%s\r\n" % (data)
-            self.push(linedata.encode('utf-8'))
+            self.push(linedata.encode('utf-8', errors='ignore'))
             logger.debug("-> %s", linedata.strip())
         except BaseException as be:
             logger.error("error while sending data: %s" % (be))
@@ -168,13 +178,14 @@ class IRCClient(asynchat.async_chat):
         self._handle_server_message({'source': source, 'action': action, 'target': target, 'data': rest})
 
     def collect_incoming_data(self, data):
-        self._rbuf.write(data)
+        incoming = data.decode('utf-8', errors='ignore')
+        self._rbuf.write(incoming)
 
     def found_terminator(self):
         msg = self._rbuf.getvalue()
         self._rbuf.truncate(0)
         try:
-            msg_decoded = msg.decode('utf-8', errors='ignore')
+            msg_decoded = msg
             logger.debug("<- %s", msg_decoded.strip())
             self._parse_server_message(msg_decoded)
         except BaseException as be:

@@ -64,11 +64,8 @@ class IRCClient(asynchat.async_chat):
             logger.debug("defer message until ready: %s", msg)
         while not self._ready:
             time.sleep(1)
-        try:
-            for channel in self._joined_channels:
-                self._send_message_to_channel(channel, msg)
-        except BaseException as be:
-            logger.exception(be)
+        for channel in self._joined_channels:
+            self._send_message_to_channel(channel, msg)
 
     def _queue_initial_irc_connection_commands(self):
         s = self._irc_settings

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 import asyncore
 import socket
 import logging
@@ -6,6 +7,12 @@ import lib.ircclient
 from lib.pluginrunner import run_plugin
 import argparse
 import ssl
+import plugins
+from lib.multiordereddict import MultiOrderedDict
+try:
+    import configparser
+except ImportError as ie:
+    import ConfigParser as configparser
 
 
 logging.basicConfig(
@@ -22,8 +29,22 @@ parser.add_argument('-c', '--channel', required=True, help='IRC channels to join
 parser.add_argument('-n', '--nick', required=False, help='IRC nick')
 parser.add_argument('-r', '--realname', required=False, help='IRC realname')
 parser.add_argument('-p', '--plugin', required=False, help='Plugins to use, argument by plugin:arg1, may be specified multiple times', action='append', default=[])
+parser.add_argument('-C', '--config', required=False, help='Include config from file', default=None)
 args = parser.parse_args()
-import plugins
+if args.config is not None:
+    kvs = []
+    iniconf = None
+    try:
+        iniconf = configparser.RawConfigParser(dict_type=MultiOrderedDict,strict=False)
+    except TypeError as te:
+        iniconf = configparser.RawConfigParser(dict_type=MultiOrderedDict)
+    iniconf.read(args.config)
+    for ci in iniconf.items('honkmaster3'):
+        key, vlist = ci
+        for vitem in vlist:
+            kvs.append('--%s' % (key))
+            kvs.append(vitem)
+    args=parser.parse_args(args=sys.argv[1:]+kvs)
 
 
 def establish_connection(addr, port):

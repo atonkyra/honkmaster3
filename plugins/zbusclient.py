@@ -24,6 +24,8 @@ class ZBusClient(object):
         self._ctx = zmq.Context()
         self._skt = self._ctx.socket(zmq.SUB)
         self._skt.set(zmq.SUBSCRIBE, subscribe.encode('ascii', errors='ignore'))
+        self._skt.setsockopt(zmq.TCP_KEEPALIVE, 1)
+        self._skt.setsockopt(zmq.TCP_KEEPALIVE_IDLE, 60)
         self._skt.connect(source)
 
     def get_messages(self):

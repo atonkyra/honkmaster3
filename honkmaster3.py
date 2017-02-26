@@ -20,7 +20,12 @@ logging.basicConfig(
     format='%(asctime)-15s %(levelname)-8s %(name)-18s %(message)s'
 )
 logger = logging.getLogger('honkmaster3')
+
+parser = argparse.ArgumentParser(description='HonkMaster3 IRC Bot', add_help=False)
+parser.add_argument('-C', '--config', required=False, help='Include config from file', default=None)
+args, unknown_args = parser.parse_known_args()
 parser = argparse.ArgumentParser(description='HonkMaster3 IRC Bot')
+parser.add_argument('-C', '--config', required=False, help='Include config from file', default=None)
 parser.add_argument('-s', '--server', required=True, help='IRC server to join')
 parser.add_argument('--server-password', required=False, help='IRC server password', default=None)
 parser.add_argument('-P', '--port', required=False, help='IRC server port', default=6667, type=int)
@@ -29,8 +34,7 @@ parser.add_argument('-c', '--channel', required=True, help='IRC channels to join
 parser.add_argument('-n', '--nick', required=False, help='IRC nick')
 parser.add_argument('-r', '--realname', required=False, help='IRC realname')
 parser.add_argument('-p', '--plugin', required=False, help='Plugins to use, argument by plugin:arg1, may be specified multiple times', action='append', default=[])
-parser.add_argument('-C', '--config', required=False, help='Include config from file', default=None)
-args = parser.parse_args()
+
 if args.config is not None:
     kvs = []
     iniconf = None
@@ -44,7 +48,9 @@ if args.config is not None:
         for vitem in vlist:
             kvs.append('--%s' % (key))
             kvs.append(vitem)
-    args=parser.parse_args(args=sys.argv[1:]+kvs)
+    args = parser.parse_args(args=sys.argv[1:]+kvs)
+else:
+    args = parser.parse_args()
 
 
 def establish_connection(addr, port):

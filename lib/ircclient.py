@@ -7,7 +7,6 @@ import logging
 import random
 import time
 
-
 IRCStatusMap = {
     '001': 'WELCOME',
     '002': 'YOURHOST',
@@ -29,10 +28,16 @@ IRCStatusMap = {
 }
 logger = logging.getLogger('ircclient')
 
+
 def user_set_or_default(default_value, key, settings_dict):
     if key in settings_dict:
         return settings_dict[key]
     return default_value
+
+
+def _get_nick_from_source(source):
+    src = source.split('!')[0]
+    return src
 
 
 class IRCClient(asynchat.async_chat):
@@ -72,7 +77,7 @@ class IRCClient(asynchat.async_chat):
         if 'server_password' in s:
             self._encsendline('PASS %s' % (s['server_password']))
         nick = user_set_or_default('HonkMaster3', 'nick', s)
-        self._encsendline('NICK %s' % (nick))
+        self._encsendline('NICK %s' % nick)
         realname = user_set_or_default('HonkMaster3', 'realname', s)
         self._encsendline('USER %(nick)s %(nick)s %(nick)s :%(realname)s' % {'nick': nick, 'realname': realname})
 
@@ -113,42 +118,35 @@ class IRCClient(asynchat.async_chat):
                 logger.warning("discarding data due to rate-limiting: %s", data)
                 return
         try:
-            linedata = "%s\r\n" % (data)
-            self.push(linedata.encode('utf-8', errors='ignore'))
-            logger.debug("-> %s", linedata.strip())
+            line_data = "%s\r\n" % data
+            self.push(line_data.encode('utf-8', errors='ignore'))
+            logger.debug("-> %s", line_data.strip())
         except BaseException as be:
-            logger.error("error while sending data: %s" % (be))
+            logger.error("error while sending data: %s" % be)
 
     def _handle_channel_join(self, msg):
         logger.info("joined %s" % (msg['target']))
         self._joined_channels.append(msg['target'])
 
-    def _get_nick_from_source(self, source):
-        src = source.split('!')[0]
-        return src
-
     def _handle_server_message(self, msg):
         if msg['action'] == 'NICKINUSE':
             nick = user_set_or_default('HonkMaster3', 'nick', self._irc_settings)
-            rand_from_nick = "%s-%s" % (nick, random.randint(0,100))
+            rand_from_nick = "%s-%s" % (nick, random.randint(0, 100))
             altnick = user_set_or_default(rand_from_nick, 'altnick', self._irc_settings)
-            self._encsendline("NICK %s" % (altnick))
+            self._encsendline("NICK %s" % altnick)
         if msg['action'] == 'ENDOFMOTD':
             self._selected_nick = msg['target']
             self._queue_channel_joins()
-        if msg['action'] == 'JOIN' and self._get_nick_from_source(msg['source']) == self._selected_nick:
+        if msg['action'] == 'JOIN' and _get_nick_from_source(msg['source']) == self._selected_nick:
             self._handle_channel_join(msg)
             self._ready = True
 
     def _parse_server_message(self, msg):
         if msg.startswith('PING'):
             challenge = msg.split(':')[1].strip()
-            self._encsendline('PONG :%s' % (challenge), True)
+            self._encsendline('PONG :%s' % challenge, True)
             logger.info("ping %s? pong %s!", challenge, challenge)
             return
-        source = None
-        action = None
-        target = None
         rest = None
         try:
             source, action, target, rest = msg.split(' ', 3)
@@ -156,7 +154,7 @@ class IRCClient(asynchat.async_chat):
             action = action.strip()
             target = target.strip()
             rest = rest.strip()
-        except:
+        except Exception:
             source, action, target = msg.split(' ', 3)
             source = source.strip()
             action = action.strip()
@@ -171,7 +169,7 @@ class IRCClient(asynchat.async_chat):
             if action in IRCStatusMap:
                 action = IRCStatusMap[action]
             else:
-                action = 'UNK%s' % (action)
+                action = 'UNK%s' % action
         self._handle_server_message({'source': source, 'action': action, 'target': target, 'data': rest})
 
     def collect_incoming_data(self, data):

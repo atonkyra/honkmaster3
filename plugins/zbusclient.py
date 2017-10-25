@@ -1,11 +1,8 @@
-import os
-import threading
-import time
-import logging
-import zmq
 import json
+import logging
 import sys
 
+import zmq
 
 logger = logging.getLogger('zbusclient')
 

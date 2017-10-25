@@ -11,7 +11,7 @@ def run_plugin(plugin, irc_client):
 class PluginRunner(threading.Thread):
     def __init__(self, plugin, irc_client):
         threading.Thread.__init__(self)
-        self._logger = logging.getLogger('pr-%s' % (plugin.__name__))
+        self._logger = logging.getLogger('pr-%s' % plugin.__name__)
         self._plugin = plugin
         self._irc_client = irc_client
         self._crashed = False

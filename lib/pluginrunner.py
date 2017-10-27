@@ -18,6 +18,10 @@ class PluginRunner(threading.Thread):
         self._finished = False
         self.daemon = True
 
+        message_handler = getattr(self._plugin, 'handle_message', None)
+        if message_handler is not None:
+            self._irc_client.register_message_handler(message_handler)
+
     def run(self):
         self._logger.debug("now listening for new messages")
         try:

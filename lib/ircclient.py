@@ -36,8 +36,7 @@ def user_set_or_default(default_value, key, settings_dict):
 
 
 def _get_nick_from_source(source):
-    src = source.split('!')[0]
-    return src
+    return source.split('!')[0]
 
 
 class IRCClient(asynchat.async_chat):
@@ -50,6 +49,7 @@ class IRCClient(asynchat.async_chat):
         except AttributeError:
             self._rbuf = StringIO()
         self._irc_settings = {}
+        self._message_handlers = []
         self._joined_channels = []
         self._rate_control_value = 0
         self._rate_control_last_message_at = 0
@@ -63,14 +63,6 @@ class IRCClient(asynchat.async_chat):
 
     def _send_message_to_channel(self, channel, msg):
         self._encsendline('PRIVMSG %s :%s' % (channel, msg))
-
-    def broadcast_message(self, msg):
-        if not self._ready:
-            logger.debug("defer message until ready: %s", msg)
-        while not self._ready:
-            time.sleep(1)
-        for channel in self._joined_channels:
-            self._send_message_to_channel(channel, msg)
 
     def _queue_initial_irc_connection_commands(self):
         s = self._irc_settings
@@ -140,6 +132,9 @@ class IRCClient(asynchat.async_chat):
         if msg['action'] == 'JOIN' and _get_nick_from_source(msg['source']) == self._selected_nick:
             self._handle_channel_join(msg)
             self._ready = True
+        if msg['action'] == 'PRIVMSG' and len(self._message_handlers) > 0:
+            for handler in self._message_handlers:
+                handler(msg)
 
     def _parse_server_message(self, msg):
         if msg.startswith('PING'):
@@ -171,6 +166,17 @@ class IRCClient(asynchat.async_chat):
             else:
                 action = 'UNK%s' % action
         self._handle_server_message({'source': source, 'action': action, 'target': target, 'data': rest})
+
+    def register_message_handler(self, fn):
+        self._message_handlers.append(fn)
+
+    def broadcast_message(self, msg):
+        if not self._ready:
+            logger.debug("defer message until ready: %s", msg)
+        while not self._ready:
+            time.sleep(1)
+        for channel in self._joined_channels:
+            self._send_message_to_channel(channel, msg)
 
     def collect_incoming_data(self, data):
         incoming = data.decode('utf-8', errors='ignore')

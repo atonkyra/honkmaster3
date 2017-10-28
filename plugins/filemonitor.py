@@ -1,8 +1,7 @@
-import os
-import threading
-import time
 import logging
+import time
 
+import os
 
 logger = logging.getLogger('filemonitor')
 
@@ -11,53 +10,47 @@ class FileMonitor(object):
     __name__ = "filemonitor"
 
     def __init__(self, logfile):
-        self._filehandle = None
+        self._file_handler = None
         self._logfile = logfile
 
     def get_messages(self):
-        st_results = None
-        st_size = None
         ino = None
-        while self._filehandle is None:
+        while self._file_handler is None:
             try:
-                self._filehandle = open(self._logfile, 'r')
+                self._file_handler = open(self._logfile, 'r')
                 st_results = os.stat(self._logfile)
                 st_size = st_results[6]
-                ino = os.stat(self._filehandle.name).st_ino
-                self._filehandle.seek(st_size)
-            except:
+                ino = os.stat(self._file_handler.name).st_ino
+                self._file_handler.seek(st_size)
+            except Exception:
                 logger.error("could not open file %s, trying again...", self._logfile)
-                self._filehandle = None
+                self._file_handler = None
                 time.sleep(1)
         logger.info("opened %s", self._logfile)
         yield 'now tracking file %s' % (self._logfile)
         while True:
-            gotline = False
-            test_ino = ino
+            got_line = False
             try:
-                test_ino = os.stat(self._filehandle.name).st_ino
-            except:
+                test_ino = os.stat(self._file_handler.name).st_ino
+            except Exception:
                 continue
             if ino != test_ino:
                 try:
-                    self._filehandle.close()
-                    self._filehandle = open(self._logfile, 'r')
-                except:
+                    self._file_handler.close()
+                    self._file_handler = open(self._logfile, 'r')
+                except Exception:
                     continue
-                st_results = os.stat(self._logfile)
-                st_size = st_results[6]
-                ino = os.stat(self._filehandle.name).st_ino
-            where = self._filehandle.tell()
-            line = self._filehandle.readline()
+                ino = os.stat(self._file_handler.name).st_ino
+            where = self._file_handler.tell()
+            line = self._file_handler.readline()
             if not line:
-                self._filehandle.seek(where)
+                self._file_handler.seek(where)
             else:
-                gotline = True
-            if gotline:
-                proper_line = None
+                got_line = True
+            if got_line:
                 try:
                     proper_line = line.decode('utf-8', errors='ignore').strip()
-                except:
+                except Exception:
                     proper_line = line.strip()
                 logger.debug("new line: %s", proper_line)
                 yield proper_line
@@ -66,4 +59,3 @@ class FileMonitor(object):
 
 
 __plugin_class__ = FileMonitor
-

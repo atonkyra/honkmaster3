@@ -1,5 +1,9 @@
+import logging
+import json
 import time
 from slackclient import SlackClient
+
+logger = logging.getLogger('slackbridge')
 
 class SlackBridge(object):
     __name__ = "SlackBridge"
@@ -50,6 +54,10 @@ class SlackBridge(object):
                         nick = self.get_user(event['user'])
                         yield '%s uploaded a file: %s' % (nick, event['file']['permalink'])
                     else:
+                        if 'subtype' in event:
+                            logger.info('unhandled event subtype: %s', event['subtype'])
+                            logger.info('%s', json.dumps(event))
+                            continue
                         messages = event['text'].split('\n')
                         nick = self.get_user(event['user'])
                         for message in messages:

@@ -42,9 +42,9 @@ if args.config is not None:
     kvs = []
     iniconf = None
     try:
-        iniconf = configparser.RawConfigParser(dict_type=MultiOrderedDict, strict=False)
+        iniconf = configparser.RawConfigParser(dict_type=MultiOrderedDict, strict=False, empty_lines_in_values=False)
     except TypeError as te:
-        iniconf = configparser.RawConfigParser(dict_type=MultiOrderedDict)
+        iniconf = configparser.RawConfigParser(dict_type=MultiOrderedDict, empty_lines_in_values=False)
     iniconf.read(args.config)
     for ci in iniconf.items('honkmaster3'):
         key, vlist = ci

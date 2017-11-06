@@ -1,3 +1,4 @@
+import re
 import logging
 import json
 import time
@@ -45,6 +46,13 @@ class SlackBridge(object):
         return ret
 
 
+    def replacer(self, re_line):
+        gdict = re_line.groupdict()
+        if 'userid' in gdict:
+            return self.get_user(gdict['userid'])
+        return ''
+
+
     def get_messages(self):
         while True:
             events = self._sc.rtm_read()
@@ -61,7 +69,8 @@ class SlackBridge(object):
                         messages = event['text'].split('\n')
                         nick = self.get_user(event['user'])
                         for message in messages:
-                            yield '<%s> %s' % (nick, message)
+                            message_formatted = re.sub(r'<@(?P<userid>\w+)>', self.replacer, message)
+                            yield '<%s> %s' % (nick, message_formatted)
             if len(events) == 0:
                 time.sleep(1)
 

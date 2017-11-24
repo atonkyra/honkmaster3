@@ -3,6 +3,8 @@ import logging
 import json
 import time
 from slackclient import SlackClient
+from websocket._exceptions import WebSocketConnectionClosedException
+
 
 logger = logging.getLogger('slackbridge')
 
@@ -10,11 +12,13 @@ class SlackBridge(object):
     __name__ = "SlackBridge"
 
     def __init__(self, arg):
-        token, channel = arg.split(';')
-        self._channel = channel
-        self._sc = SlackClient(token)
-        self._sc.rtm_connect(with_team_state=False)
+        self._token, self._channel = arg.split(';')
         self._user_cache = {}
+        self.reconnect()
+
+    def reconnect(self):
+        self._sc = SlackClient(self._token)
+        self._sc.rtm_connect(with_team_state=False)
 
     def handle_message(self, msg):
         if msg['action'] == 'PRIVMSG':
@@ -53,9 +57,21 @@ class SlackBridge(object):
         return ''
 
 
+    def get_slack_events(self):
+        try:
+            events = self._sc.rtm_read()
+            return events
+        except WebSocketConnectionClosedException:
+            self.reconnect()
+            return []
+        except BaseException as be:
+            logger.exception(be)
+            self.reconnect()
+            return []
+
     def get_messages(self):
         while True:
-            events = self._sc.rtm_read()
+            events = self.get_slack_events()
             for event in events:
                 if 'type' in event and event['type'] == 'message' and 'text' in event and 'user' in event:
                     if 'upload' in event and event['upload'] == True and 'file' in event and 'permalink' in event['file']:

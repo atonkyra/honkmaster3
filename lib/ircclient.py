@@ -3,7 +3,6 @@ try:
 except ImportError:
     from io import StringIO
 import asynchat
-import logging
 import random
 import time
 
@@ -26,7 +25,6 @@ IRCStatusMap = {
     '376': 'ENDOFMOTD',
     '433': 'NICKINUSE'
 }
-logger = logging.getLogger('ircclient')
 
 
 def user_set_or_default(default_value, key, settings_dict):
@@ -40,7 +38,8 @@ def _get_nick_from_source(source):
 
 
 class IRCClient(asynchat.async_chat):
-    def __init__(self, skt, **kwargs):
+    def __init__(self, logger, skt, **kwargs):
+        self._logger = logger
         asynchat.async_chat.__init__(self, sock=skt)
         self.set_terminator(b'\n')
         self._rbuf = None
@@ -89,7 +88,7 @@ class IRCClient(asynchat.async_chat):
                         else:
                             self._encsendline("JOIN %(channel)s" % join_settings)
             else:
-                logger.error("channels argument is not list, skipping channel joins")
+                self._logger.error("channels argument is not list, skipping channel joins")
 
     def _encsendline(self, data, force=False):
         if self._ready:
@@ -98,7 +97,7 @@ class IRCClient(asynchat.async_chat):
             self._rate_control_last_message_at = cur_time
             self._rate_control_value = max(0.0, self._rate_control_value - diff_time)
             if self._rate_control_limiting and self._rate_control_value == 0.0:
-                logger.info("cleared rate-limit, %s messages discarded", self._rate_control_discard_count)
+                self._logger.info("cleared rate-limit, %s messages discarded", self._rate_control_discard_count)
                 self._rate_control_discard_count = 0
                 self._rate_control_limiting = False
             if not self._rate_control_limiting:
@@ -107,17 +106,17 @@ class IRCClient(asynchat.async_chat):
                     self._rate_control_limiting = True
             if self._rate_control_limiting and not force:
                 self._rate_control_discard_count += 1
-                logger.warning("discarding data due to rate-limiting: %s", data)
+                self._logger.warning("discarding data due to rate-limiting: %s", data)
                 return
         try:
             line_data = "%s\r\n" % data
             self.push(line_data.encode('utf-8', errors='ignore'))
-            logger.debug("-> %s", line_data.strip())
+            self._logger.debug("-> %s", line_data.strip())
         except BaseException as be:
-            logger.error("error while sending data: %s" % be)
+            self._logger.error("error while sending data: %s" % be)
 
     def _handle_channel_join(self, msg):
-        logger.info("joined %s" % (msg['target']))
+        self._logger.info("joined %s" % (msg['target']))
         self._joined_channels.append(msg['target'])
 
     def _handle_server_message(self, msg):
@@ -140,7 +139,7 @@ class IRCClient(asynchat.async_chat):
         if msg.startswith('PING'):
             challenge = msg.split(':')[1].strip()
             self._encsendline('PONG :%s' % challenge, True)
-            logger.info("ping %s? pong %s!", challenge, challenge)
+            self._logger.info("ping %s? pong %s!", challenge, challenge)
             return
         rest = None
         try:
@@ -172,7 +171,7 @@ class IRCClient(asynchat.async_chat):
 
     def broadcast_message(self, msg):
         if not self._ready:
-            logger.debug("defer message until ready: %s", msg)
+            self._logger.debug("defer message until ready: %s", msg)
         while not self._ready:
             time.sleep(1)
         for channel in self._joined_channels:
@@ -188,8 +187,8 @@ class IRCClient(asynchat.async_chat):
         self._rbuf.seek(0)
         try:
             msg_decoded = msg
-            logger.debug("<- %s", msg_decoded.strip())
+            self._logger.debug("<- %s", msg_decoded.strip())
             self._parse_server_message(msg_decoded)
         except BaseException as be:
-            logger.exception(be)
-            logger.error("failed to parse line from server: %s", msg)
+            self._logger.exception(be)
+            self._logger.error("failed to parse line from server: %s", msg)

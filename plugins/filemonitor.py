@@ -27,7 +27,6 @@ class FileMonitor(object):
                 self._file_handler = None
                 time.sleep(1)
         logger.info("opened %s", self._logfile)
-        yield 'now tracking file %s' % (self._logfile)
         while True:
             got_line = False
             try:
